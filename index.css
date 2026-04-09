@@ -1,0 +1,41 @@
+@import "tailwindcss";
+
+@layer base {
+  html, body {
+    overscroll-behavior-y: none; /* Disable pull-to-refresh on mobile */
+    -webkit-tap-highlight-color: transparent;
+    user-select: none; /* Default to no selection for app feel */
+  }
+
+  /* Allow selection in inputs and specific areas */
+  input, textarea, [contenteditable="true"], .selectable {
+    user-select: text;
+  }
+
+  /* Smooth scrolling for the whole app */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: #222 #050505;
+  }
+}
+
+@layer utilities {
+  .safe-top {
+    padding-top: env(safe-area-inset-top);
+  }
+  .safe-bottom {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+}
+
+/* PWA Standalone specific styles */
+@media (display-mode: standalone) {
+  .pwa-only {
+    display: block;
+  }
+  
+  /* Add padding for iOS home indicator if needed */
+  nav {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+}
