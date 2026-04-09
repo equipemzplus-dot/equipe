@@ -75,8 +75,13 @@ export const PWAInstallPrompt: React.FC = () => {
             </button>
 
             <div className="flex items-start gap-4">
-              <div className="w-12 h-12 rounded-xl bg-yellow-600/10 border border-yellow-600/20 flex items-center justify-center flex-shrink-0">
-                <Smartphone className="text-yellow-500" size={24} />
+              <div className="w-12 h-12 rounded-xl overflow-hidden bg-yellow-600/10 border border-yellow-600/20 flex items-center justify-center flex-shrink-0">
+                <img 
+                  src="https://storage.googleapis.com/static.antigravity.dev/applets/7uh5mtashjcrpvg5aiawes/c9222452-32b5-4720-835c-204126130f14.png" 
+                  alt="MZ+ Elite" 
+                  className="w-full h-full object-cover"
+                  referrerPolicy="no-referrer"
+                />
               </div>
               
               <div className="flex-1">

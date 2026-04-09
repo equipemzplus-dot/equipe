@@ -9,13 +9,7 @@
   "orientation": "portrait",
   "icons": [
     {
-      "src": "https://picsum.photos/seed/mzplus192/192/192",
-      "sizes": "192x192",
-      "type": "image/png",
-      "purpose": "any maskable"
-    },
-    {
-      "src": "https://picsum.photos/seed/mzplus512/512/512",
+      "src": "https://storage.googleapis.com/static.antigravity.dev/applets/7uh5mtashjcrpvg5aiawes/c9222452-32b5-4720-835c-204126130f14.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"

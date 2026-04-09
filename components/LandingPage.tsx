@@ -103,7 +103,7 @@ export const LandingPage: React.FC = () => {
   );
 
   return (
-    <div className="h-[100dvh] bg-[#050505] text-white flex flex-col relative overflow-hidden font-sans select-none">
+    <div className="h-[100dvh] bg-[#050505] text-white flex flex-col relative overflow-x-hidden font-sans">
       {/* Background Ambience */}
       <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none">
         <div className="absolute top-[-10%] left-[-5%] w-[80%] h-[80%] bg-yellow-600/5 rounded-full blur-[120px] animate-pulse"></div>
@@ -132,7 +132,7 @@ export const LandingPage: React.FC = () => {
         )}
       </nav>
 
-      <main className="relative z-10 flex-1 flex flex-col items-center justify-center overflow-hidden">
+      <main className="relative z-10 flex-1 flex flex-col items-center justify-center">
         {view === 'presentation' ? (
           <div className="w-full h-full flex flex-col items-center justify-between py-6 md:py-10 px-6 max-w-4xl mx-auto text-center animate-fade-in">
             
