@@ -257,16 +257,19 @@ const HomeLandingAdmin = () => {
   const [config, setConfig] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     supabase.from('mz_home_config').select('*').eq('id', 'home-landing').maybeSingle().then(({ data }) => {
-      const defaultConfig = { id: 'home-landing', video_url: '', youtube_iframe: '' };
+      const defaultConfig = { id: 'home-landing', video_url: '', youtube_iframe: '', platform_icon_url: '' };
       if (data) {
         setConfig({
           ...defaultConfig,
           ...data,
           video_url: data.video_url || '',
-          youtube_iframe: data.youtube_iframe || ''
+          youtube_iframe: data.youtube_iframe || '',
+          platform_icon_url: data.platform_icon_url || ''
         });
       } else {
         setConfig(defaultConfig);
@@ -274,6 +277,34 @@ const HomeLandingAdmin = () => {
       setLoading(false);
     });
   }, []);
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsUploading(true);
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `platform_icon_${Date.now()}.${fileExt}`;
+      const filePath = `icons/${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('mz_assets')
+        .upload(filePath, file);
+
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('mz_assets')
+        .getPublicUrl(filePath);
+
+      setConfig({ ...config, platform_icon_url: publicUrl });
+    } catch (err: any) {
+      alert("Erreur upload icône : " + err.message);
+    } finally {
+      setIsUploading(false);
+    }
+  };
 
   const handleSave = async () => {
     setIsSaving(true);
@@ -284,19 +315,87 @@ const HomeLandingAdmin = () => {
 
   if (loading) return null;
   return (
-    <GoldBorderCard className="p-8 space-y-6">
-      <h3 className="text-xl font-black uppercase">Configuration <GoldText>Landing Page</GoldText></h3>
-      <div className="space-y-4">
-        <div className="space-y-2">
-          <label className="text-[10px] font-black uppercase text-neutral-500">URL Vidéo Directe</label>
-          <input className="w-full bg-black p-4 rounded-xl border border-white/10 text-xs text-white" value={config.video_url} onChange={e => setConfig({...config, video_url: e.target.value})} />
-        </div>
-        <div className="space-y-2">
-          <label className="text-[10px] font-black uppercase text-neutral-500">Iframe YouTube (Optionnel)</label>
-          <textarea className="w-full bg-black p-4 rounded-xl border border-white/10 text-xs text-white" value={config.youtube_iframe} onChange={e => setConfig({...config, youtube_iframe: e.target.value})} />
+    <GoldBorderCard className="p-8 space-y-8">
+      <div className="flex items-center justify-between border-b border-white/5 pb-6">
+        <h3 className="text-xl font-black uppercase">Configuration <GoldText>Identité Visuelle</GoldText></h3>
+        <div className="flex items-center gap-3 px-4 py-2 bg-yellow-600/10 border border-yellow-600/20 rounded-xl">
+          <Globe size={14} className="text-yellow-500" />
+          <span className="text-[9px] font-black uppercase text-yellow-500">Public</span>
         </div>
       </div>
-      <PrimaryButton onClick={handleSave} isLoading={isSaving} fullWidth>Enregistrer les modifications</PrimaryButton>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
+        <div className="space-y-6">
+          <div className="space-y-3">
+            <label className="text-[10px] font-black uppercase text-neutral-500 tracking-widest flex items-center gap-2">
+              <ImageIcon size={14} className="text-yellow-600" /> Icône de la Plateforme (PWA / Favicon)
+            </label>
+            <div className="flex items-center gap-6">
+              <div className="w-24 h-24 rounded-2xl bg-black border border-white/10 flex items-center justify-center overflow-hidden relative group">
+                {config.platform_icon_url ? (
+                  <img src={config.platform_icon_url} className="w-full h-full object-cover" alt="Icon preview" />
+                ) : (
+                  <ImageIcon size={32} className="text-neutral-800" />
+                )}
+                {isUploading && (
+                  <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
+                    <Loader2 size={24} className="animate-spin text-yellow-500" />
+                  </div>
+                )}
+              </div>
+              <div className="flex-1 space-y-3">
+                <input 
+                  type="file" 
+                  ref={fileInputRef} 
+                  className="hidden" 
+                  accept="image/*" 
+                  onChange={handleFileUpload} 
+                />
+                <button 
+                  onClick={() => fileInputRef.current?.click()}
+                  className="px-6 py-3 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2"
+                >
+                  <Upload size={14} /> Choisir une image
+                </button>
+                <p className="text-[8px] text-neutral-600 font-bold uppercase leading-relaxed">Format recommandé : PNG 512x512px. Cette icône sera utilisée pour l'installation mobile.</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="space-y-3">
+            <label className="text-[10px] font-black uppercase text-neutral-500 tracking-widest flex items-center gap-2">
+              <Monitor size={14} className="text-yellow-600" /> URL Vidéo Directe (Landing Page)
+            </label>
+            <input 
+              className="w-full bg-black p-4 rounded-xl border border-white/10 text-xs text-white font-mono outline-none focus:border-yellow-600 transition-all" 
+              value={config.video_url} 
+              onChange={e => setConfig({...config, video_url: e.target.value})} 
+              placeholder="https://..."
+            />
+          </div>
+        </div>
+
+        <div className="space-y-6">
+          <div className="space-y-3">
+            <label className="text-[10px] font-black uppercase text-neutral-500 tracking-widest flex items-center gap-2">
+              <Code size={14} className="text-yellow-600" /> Iframe YouTube (Alternative)
+            </label>
+            <textarea 
+              rows={5}
+              className="w-full bg-black p-4 rounded-xl border border-white/10 text-xs text-white font-mono outline-none focus:border-yellow-600 transition-all resize-none" 
+              value={config.youtube_iframe} 
+              onChange={e => setConfig({...config, youtube_iframe: e.target.value})} 
+              placeholder="<iframe ...></iframe>"
+            />
+          </div>
+        </div>
+      </div>
+
+      <div className="pt-6 border-t border-white/5">
+        <PrimaryButton onClick={handleSave} isLoading={isSaving} fullWidth size="lg">
+          <Save size={18} className="mr-2" /> Enregistrer la configuration globale
+        </PrimaryButton>
+      </div>
     </GoldBorderCard>
   );
 };
