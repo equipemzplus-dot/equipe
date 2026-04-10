@@ -127,6 +127,19 @@ const App: React.FC = () => {
   }, []);
 
   useEffect(() => {
+    // Fetch dynamic platform identity (Icon)
+    supabase.from('mz_home_config').select('platform_icon_url').eq('id', 'home-landing').maybeSingle().then(({ data }) => {
+      if (data?.platform_icon_url) {
+        // Update apple-touch-icon
+        const appleIcon = document.querySelector('link[rel="apple-touch-icon"]');
+        if (appleIcon) appleIcon.setAttribute('href', data.platform_icon_url);
+        
+        // Update favicon
+        const favicon = document.querySelector('link[rel="icon"]');
+        if (favicon) favicon.setAttribute('href', data.platform_icon_url);
+      }
+    });
+
     const getInitialSession = async (retryCount = 0) => {
       try {
         const { data: { session: s } } = await supabase.auth.getSession();

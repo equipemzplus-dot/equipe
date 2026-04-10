@@ -2,13 +2,30 @@
 import React, { useState, useEffect } from 'react';
 import { Download, X, Smartphone, Share } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import { supabase } from '../services/supabase.ts';
 
 export const PWAInstallPrompt: React.FC = () => {
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const [isVisible, setIsVisible] = useState(false);
   const [isIOS, setIsIOS] = useState(false);
+  const [platformIcon, setPlatformIcon] = useState<string>("https://storage.googleapis.com/static.antigravity.dev/applets/7uh5mtashjcrpvg5aiawes/c9222452-32b5-4720-835c-204126130f14.png");
 
   useEffect(() => {
+    // Fetch dynamic icon
+    supabase.from('mz_home_config').select('platform_icon_url').eq('id', 'home-landing').maybeSingle().then(({ data }) => {
+      if (data?.platform_icon_url) {
+        setPlatformIcon(data.platform_icon_url);
+        
+        // Dynamically update apple-touch-icon for iOS
+        const appleIcon = document.querySelector('link[rel="apple-touch-icon"]');
+        if (appleIcon) appleIcon.setAttribute('href', data.platform_icon_url);
+        
+        // Dynamically update favicon
+        const favicon = document.querySelector('link[rel="icon"]');
+        if (favicon) favicon.setAttribute('href', data.platform_icon_url);
+      }
+    });
+
     // Detect iOS
     const isIOSDevice = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
     setIsIOS(isIOSDevice);
@@ -77,7 +94,7 @@ export const PWAInstallPrompt: React.FC = () => {
             <div className="flex items-start gap-4">
               <div className="w-12 h-12 rounded-xl overflow-hidden bg-yellow-600/10 border border-yellow-600/20 flex items-center justify-center flex-shrink-0">
                 <img 
-                  src="https://storage.googleapis.com/static.antigravity.dev/applets/7uh5mtashjcrpvg5aiawes/c9222452-32b5-4720-835c-204126130f14.png" 
+                  src={platformIcon} 
                   alt="MZ+ Elite" 
                   className="w-full h-full object-cover"
                   referrerPolicy="no-referrer"
