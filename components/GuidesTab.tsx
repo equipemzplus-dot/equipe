@@ -1,7 +1,6 @@
 
 import React from 'react';
 import { HelpCircle, Target, Briefcase, Sparkles, ArrowRight, PlayCircle, Users } from 'lucide-react';
-import { motion } from 'motion/react';
 
 interface GuidesTabProps {
   onStartAffiliationGuide: () => void;
@@ -57,7 +56,7 @@ export const GuidesTab: React.FC<GuidesTabProps> = ({ onStartAffiliationGuide, o
   ];
 
   return (
-    <div className="p-6 max-w-5xl mx-auto space-y-12 animate-fade-in">
+    <div className="p-6 max-w-5xl mx-auto space-y-12 animate-in fade-in duration-700">
       <header className="space-y-4 text-center md:text-left">
         <div className="inline-flex items-center gap-2 px-3 py-1 bg-white/5 border border-white/10 rounded-full">
           <HelpCircle size={14} className="text-purple-500" />
@@ -73,12 +72,10 @@ export const GuidesTab: React.FC<GuidesTabProps> = ({ onStartAffiliationGuide, o
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {guides.map((guide, index) => (
-          <motion.div
+          <div
             key={guide.id}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: index * 0.1 }}
-            className={`group relative p-8 rounded-[2.5rem] border ${guide.borderColor} ${guide.bgColor} backdrop-blur-sm hover:scale-[1.02] transition-all cursor-pointer overflow-hidden`}
+            className={`group relative p-8 rounded-[2.5rem] border ${guide.borderColor} ${guide.bgColor} backdrop-blur-sm hover:scale-[1.02] transition-all cursor-pointer overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-500`}
+            style={{ animationDelay: `${index * 100}ms` }}
             onClick={guide.action}
           >
             <div className="relative z-10 flex flex-col h-full justify-between gap-8">
@@ -99,7 +96,7 @@ export const GuidesTab: React.FC<GuidesTabProps> = ({ onStartAffiliationGuide, o
 
             {/* Decorative element */}
             <div className={`absolute -right-8 -bottom-8 w-32 h-32 ${guide.bgColor} blur-3xl rounded-full opacity-50 group-hover:opacity-100 transition-opacity`}></div>
-          </motion.div>
+          </div>
         ))}
       </div>
 

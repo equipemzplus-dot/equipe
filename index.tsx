@@ -23,9 +23,7 @@ const mountApp = () => {
 
     const root = createRoot(rootElement);
     root.render(
-      <React.StrictMode>
-        <App />
-      </React.StrictMode>
+      <App />
     );
     console.log("MZ+ System: React rendered successfully.");
   } catch (error) {
