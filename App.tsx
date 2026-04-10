@@ -35,18 +35,13 @@ import { PremiumPopup } from './components/PremiumPopup.tsx';
 import { PremiumAccessGate } from './components/premium-access/PremiumAccessGate.tsx';
 import { PWAInstallPrompt } from './components/PWAInstallPrompt.tsx';
 
-const PWA_ICON_URL = "https://chatgpt.com/backend-api/estuary/content?id=file_00000000bbf8722fbb4f02c3737a51c8&cp=pri&ma=90000&ts=20553&p=igh&cid=1&sig=e709109e0b34c94229d5b1f8ca2269efe44a484f8b0a52a6e34bb2b1736a39bc&v=0";
-
 const ADMIN_EMAILS = [
   'equipemzplus@gmail.com',
   'millionairezoneplus@gmail.com',
   'admin@mz.plus'
 ];
 
-console.log("App.tsx: Module loaded");
-
 const App: React.FC = () => {
-  console.log("App: Component rendering...");
   const [session, setSession] = useState<any>(null);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [wallet, setWallet] = useState<Wallet | null>(null);
@@ -342,187 +337,197 @@ const App: React.FC = () => {
     }, 800); // Délai suffisant pour l'enregistrement et l'effet visuel
   }, [customerProduct, referrerId]);
 
+  if (loading || !isProductChecked || !authInitialized) {
+    return (
+      <div className="min-h-screen bg-[#050505] flex flex-col items-center justify-center text-yellow-500 font-black gap-6 p-6 text-center">
+        <div className="relative">
+          <Loader className="animate-spin text-yellow-600" size={56} strokeWidth={3} />
+          <div className="absolute inset-0 bg-yellow-500 blur-2xl opacity-10 animate-pulse"></div>
+        </div>
+        <div className="flex flex-col items-center gap-2">
+          <span className="text-[11px] tracking-[0.4em] uppercase animate-pulse">Initialisation MZ+ Élite</span>
+          <span className="text-[8px] tracking-[0.2em] text-neutral-600 uppercase">Vérification des protocoles de sécurité...</span>
+        </div>
+        
+        {showDiagnostic && (
+          <div className="mt-8 space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-700">
+            <p className="text-[10px] text-neutral-500 uppercase tracking-widest leading-relaxed max-w-xs">
+              Le démarrage prend plus de temps que prévu. <br/>
+              Status: {loading ? "Chargement..." : "Prêt"} | {isProductChecked ? "Produit OK" : "Vérif Produit..."} | {authInitialized ? "Auth OK" : "Auth..."}
+            </p>
+            <div className="flex flex-col gap-3">
+              <button 
+                onClick={() => window.location.reload()}
+                className="px-6 py-3 bg-white/5 border border-white/10 rounded-xl text-[10px] text-white uppercase tracking-widest hover:bg-white/10 transition-all flex items-center justify-center gap-2"
+              >
+                <RefreshCw size={14} /> Rafraîchir la page
+              </button>
+              <button 
+                onClick={() => {
+                  localStorage.clear();
+                  sessionStorage.clear();
+                  window.location.reload();
+                }}
+                className="px-6 py-3 bg-red-600/10 border border-red-600/20 rounded-xl text-[10px] text-red-500 uppercase tracking-widest hover:bg-red-600/20 transition-all"
+              >
+                Réinitialiser le cache
+              </button>
+              <button 
+                onClick={() => {
+                  setLoading(false);
+                  setIsProductChecked(true);
+                  setAuthInitialized(true);
+                }}
+                className="text-[9px] text-neutral-600 underline underline-offset-4 hover:text-neutral-400"
+              >
+                Forcer le démarrage (Expert)
+              </button>
+            </div>
+          </div>
+        )}
+
+        {!showDiagnostic && (
+          <button 
+            onClick={() => window.location.reload()}
+            className="mt-12 px-6 py-2 border border-white/5 rounded-full text-[8px] text-neutral-700 uppercase tracking-widest hover:text-white hover:border-white/20 transition-all"
+          >
+            Le chargement est trop long ? Rafraîchir
+          </button>
+        )}
+      </div>
+    );
+  }
+
   const isAdmin = userProfile?.is_admin === true || !!userProfile?.admin_role;
 
-  return (
-    <>
-      {loading || !isProductChecked || !authInitialized ? (
-        <div className="min-h-screen bg-[#050505] flex flex-col items-center justify-center text-yellow-500 font-black gap-6 p-6 text-center">
-          <div className="relative">
-            <Loader className="animate-spin text-yellow-600" size={56} strokeWidth={3} />
-            <div className="absolute inset-0 bg-yellow-500 blur-2xl opacity-10 animate-pulse"></div>
-          </div>
-          <div className="flex flex-col items-center gap-2">
-            <span className="text-[11px] tracking-[0.4em] uppercase animate-pulse">Initialisation MZ+ Élite</span>
-            <span className="text-[8px] tracking-[0.2em] text-neutral-600 uppercase">Vérification des protocoles de sécurité...</span>
-          </div>
-          
-          {showDiagnostic && (
-            <div className="mt-8 space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-700">
-              <p className="text-[10px] text-neutral-500 uppercase tracking-widest leading-relaxed max-w-xs">
-                Le démarrage prend plus de temps que prévu. <br/>
-                Status: {loading ? "Chargement..." : "Prêt"} | {isProductChecked ? "Produit OK" : "Vérif Produit..."} | {authInitialized ? "Auth OK" : "Auth..."}
-              </p>
-              <div className="flex flex-col gap-3">
-                <button 
-                  onClick={() => window.location.reload()}
-                  className="px-6 py-3 bg-white/5 border border-white/10 rounded-xl text-[10px] text-white uppercase tracking-widest hover:bg-white/10 transition-all flex items-center justify-center gap-2"
-                >
-                  <RefreshCw size={14} /> Rafraîchir la page
-                </button>
-                <button 
-                  onClick={() => {
-                    localStorage.clear();
-                    sessionStorage.clear();
-                    window.location.reload();
-                  }}
-                  className="px-6 py-3 bg-red-600/10 border border-red-600/20 rounded-xl text-[10px] text-red-500 uppercase tracking-widest hover:bg-red-600/20 transition-all"
-                >
-                  Réinitialiser le cache
-                </button>
-                <button 
-                  onClick={() => {
-                    setLoading(false);
-                    setIsProductChecked(true);
-                    setAuthInitialized(true);
-                  }}
-                  className="text-[9px] text-neutral-600 underline underline-offset-4 hover:text-neutral-400"
-                >
-                  Forcer le démarrage (Expert)
-                </button>
-              </div>
-            </div>
-          )}
+  if (customerProduct) {
+    return (
+      <ProductSalesPage 
+        product={customerProduct} 
+        referrerId={referrerId} 
+        purchaseStep={purchaseStep}
+        onPurchase={handlePurchase}
+        onSuccess={() => setPurchaseStep('success')}
+        countdown={900}
+        isLoggedIn={!!session}
+      />
+    );
+  }
 
-          {!showDiagnostic && (
-            <button 
-              onClick={() => window.location.reload()}
-              className="mt-12 px-6 py-2 border border-white/5 rounded-full text-[8px] text-neutral-700 uppercase tracking-widest hover:text-white hover:border-white/20 transition-all"
-            >
-              Le chargement est trop long ? Rafraîchir
-            </button>
-          )}
+  if (!session) {
+    return <LandingPage />;
+  }
+
+  if (!userProfile) {
+    return (
+      <div className="min-h-screen bg-[#050505] flex flex-col items-center justify-center p-8 text-center">
+        <div className="w-16 h-16 bg-yellow-600/10 rounded-2xl flex items-center justify-center text-yellow-600 mb-6 border border-yellow-600/20">
+          <RefreshCw className="animate-spin" size={32} />
         </div>
-      ) : customerProduct ? (
-        <ProductSalesPage 
-          product={customerProduct} 
-          referrerId={referrerId} 
-          purchaseStep={purchaseStep}
-          onPurchase={handlePurchase}
-          onSuccess={() => setPurchaseStep('success')}
-          countdown={900}
-          isLoggedIn={!!session}
-        />
-      ) : !session ? (
-        <LandingPage />
-      ) : !userProfile ? (
-        <div className="min-h-screen bg-[#050505] flex flex-col items-center justify-center p-8 text-center">
-          <div className="w-16 h-16 bg-yellow-600/10 rounded-2xl flex items-center justify-center text-yellow-600 mb-6 border border-yellow-600/20">
-            <RefreshCw className="animate-spin" size={32} />
-          </div>
-          <h2 className="text-xl font-black text-white uppercase tracking-tighter mb-2">Synchronisation du Profil</h2>
-          <p className="text-neutral-500 text-[10px] uppercase tracking-widest mb-8 max-w-xs leading-relaxed">
-            Nous récupérons vos accès ambassadeur. Cela peut prendre quelques secondes.
-          </p>
-          <button 
-            onClick={() => session && fetchUserData(session.user.id, session.user.email, session.user.user_metadata?.full_name)}
-            className="px-8 py-3 bg-white/5 text-white border border-white/10 font-black uppercase text-[10px] tracking-widest rounded-xl hover:bg-white/10 transition-all"
-          >
-            Réessayer la synchronisation
-          </button>
-        </div>
-      ) : (
-        <DashboardLayout 
-          activeTab={activeTab} 
-          setActiveTab={setActiveTab} 
-          isAdmin={isAdmin} 
-          profile={userProfile}
-          isMenuOpen={isMenuOpen}
-          setIsMenuOpen={setIsMenuOpen}
+        <h2 className="text-xl font-black text-white uppercase tracking-tighter mb-2">Synchronisation du Profil</h2>
+        <p className="text-neutral-500 text-[10px] uppercase tracking-widest mb-8 max-w-xs leading-relaxed">
+          Nous récupérons vos accès ambassadeur. Cela peut prendre quelques secondes.
+        </p>
+        <button 
+          onClick={() => session && fetchUserData(session.user.id, session.user.email, session.user.user_metadata?.full_name)}
+          className="px-8 py-3 bg-white/5 text-white border border-white/10 font-black uppercase text-[10px] tracking-widest rounded-xl hover:bg-white/10 transition-all"
         >
-          <PremiumAccessGate />
-          
-          <PushDisplay profile={userProfile} />
-          <PremiumPopup user={userProfile} />
-          <MZPlusPresentationOverlay profile={userProfile} onUpgrade={() => setActiveTab('flash_offer')} />
-          <AnnouncementOverlay profile={userProfile} onNavigate={(tab) => setActiveTab(tab as TabId)} />
-          <SlideNotificationAffiliation activeTab={activeTab} onUpgrade={() => setActiveTab('flash_offer')} />
+          Réessayer la synchronisation
+        </button>
+      </div>
+    );
+  }
 
-          {activeTab === 'flash_offer' && <MZPlusFlashOfferOverlay profile={userProfile} onUpgrade={() => setActiveTab('upgrade')} onClose={() => setActiveTab('dashboard')} isFullPage={true} />}
-          {activeTab === 'dashboard' && (
-            <GlobalView 
-              profile={userProfile} 
-              onSwitchTab={setActiveTab} 
-              onStartGuide={() => {
-                if (!localStorage.getItem('mz_guide_completed')) {
-                  setIsGuideActive(true);
-                  localStorage.setItem('mz_guide_completed', 'true');
-                }
-              }}
-              activeCategory={activeCategory}
-              setActiveCategory={setActiveCategory}
-            />
-          )}
-          <AffiliationGuide 
-            isActive={isGuideActive} 
-            onComplete={() => setIsGuideActive(false)} 
-            activeCategory={activeCategory}
-            activeTab={activeTab}
-          />
-          <RPAGuide 
-            isActive={isRPAGuideActive} 
-            onComplete={() => setIsRPAGuideActive(false)} 
-          />
-          <TeamGuide 
-            isActive={isTeamGuideActive} 
-            onComplete={() => setIsTeamGuideActive(false)} 
-          />
-          {activeTab === 'recompense' && <RewardFeature profile={userProfile} onSwitchTab={setActiveTab} />}
-          {activeTab === 'private_chat' && <EspacePrive profile={userProfile} />}
-          {activeTab === 'private_messaging' && <PrivateMessagingMain profile={userProfile} />}
-          {activeTab === 'revenus' && <RevenueTab profile={userProfile} wallet={wallet} />}
-          {activeTab === 'affiliation' && <AffiliationSystem profile={userProfile} lastUpdateSignal={lastUpdateSignal} onSwitchTab={setActiveTab} />}
-          {activeTab === 'team' && <TeamTab profile={userProfile} teamCount={teamCount} onSwitchTab={setActiveTab} />}
-          {activeTab === 'coaching' && <CoachingTab profile={userProfile} onSwitchTab={setActiveTab} />}
-          {activeTab === 'formation' && <FormationTab profile={userProfile} onSwitchTab={setActiveTab} />}
-          {activeTab === 'rpa' && (
-            <RPADashboard 
-              profile={userProfile} 
-              onRefresh={triggerRefresh} 
-              onSwitchTab={setActiveTab} 
-              onStartGuide={() => {
-                localStorage.removeItem('mz_rpa_guide_completed');
-                setIsRPAGuideActive(true);
-              }}
-            />
-          )}
-          {activeTab === 'suggestions' && <SuggestionsTab profile={userProfile} />}
-          {activeTab === 'guides' && (
-            <GuidesTab 
-              onStartAffiliationGuide={() => {
-                localStorage.removeItem('mz_guide_completed');
-                setActiveTab('dashboard');
+  return (
+    <DashboardLayout 
+      activeTab={activeTab} 
+      setActiveTab={setActiveTab} 
+      isAdmin={isAdmin} 
+      profile={userProfile}
+      isMenuOpen={isMenuOpen}
+      setIsMenuOpen={setIsMenuOpen}
+    >
+        <PremiumAccessGate />
+        
+        <PushDisplay profile={userProfile} />
+        <PremiumPopup user={userProfile} />
+        <MZPlusPresentationOverlay profile={userProfile} onUpgrade={() => setActiveTab('flash_offer')} />
+        <AnnouncementOverlay profile={userProfile} onNavigate={(tab) => setActiveTab(tab as TabId)} />
+        <SlideNotificationAffiliation activeTab={activeTab} onUpgrade={() => setActiveTab('flash_offer')} />
+
+        {activeTab === 'flash_offer' && <MZPlusFlashOfferOverlay profile={userProfile} onUpgrade={() => setActiveTab('upgrade')} onClose={() => setActiveTab('dashboard')} isFullPage={true} />}
+        {activeTab === 'dashboard' && (
+          <GlobalView 
+            profile={userProfile} 
+            onSwitchTab={setActiveTab} 
+            onStartGuide={() => {
+              if (!localStorage.getItem('mz_guide_completed')) {
                 setIsGuideActive(true);
-              }}
-              onStartRPAGuide={() => {
-                localStorage.removeItem('mz_rpa_guide_completed');
-                setActiveTab('rpa');
-                setIsRPAGuideActive(true);
-              }}
-              onStartTeamGuide={() => {
-                localStorage.removeItem('mz_team_guide_completed');
-                setActiveTab('team');
-                setIsTeamGuideActive(true);
-              }}
-            />
-          )}
-          {activeTab === 'upgrade' && <UpgradeTab />}
-          {activeTab === 'luna_chat' && <LunaChatPage profile={userProfile} onUpgrade={() => setActiveTab('flash_offer')} />}
-          {activeTab === 'admin' && isAdmin && <AdminPanel adminProfile={userProfile} lastUpdateSignal={lastUpdateSignal} onRefresh={triggerRefresh} />}
-          <PWAInstallPrompt />
-        </DashboardLayout>
-      )}
-    </>
+                localStorage.setItem('mz_guide_completed', 'true');
+              }
+            }}
+            activeCategory={activeCategory}
+            setActiveCategory={setActiveCategory}
+          />
+        )}
+        <AffiliationGuide 
+          isActive={isGuideActive} 
+          onComplete={() => setIsGuideActive(false)} 
+          activeCategory={activeCategory}
+          activeTab={activeTab}
+        />
+        <RPAGuide 
+          isActive={isRPAGuideActive} 
+          onComplete={() => setIsRPAGuideActive(false)} 
+        />
+        <TeamGuide 
+          isActive={isTeamGuideActive} 
+          onComplete={() => setIsTeamGuideActive(false)} 
+        />
+        {activeTab === 'recompense' && <RewardFeature profile={userProfile} onSwitchTab={setActiveTab} />}
+        {activeTab === 'private_chat' && <EspacePrive profile={userProfile} />}
+        {activeTab === 'private_messaging' && <PrivateMessagingMain profile={userProfile} />}
+        {activeTab === 'revenus' && <RevenueTab profile={userProfile} wallet={wallet} />}
+        {activeTab === 'affiliation' && <AffiliationSystem profile={userProfile} lastUpdateSignal={lastUpdateSignal} onSwitchTab={setActiveTab} />}
+        {activeTab === 'team' && <TeamTab profile={userProfile} teamCount={teamCount} onSwitchTab={setActiveTab} />}
+        {activeTab === 'coaching' && <CoachingTab profile={userProfile} onSwitchTab={setActiveTab} />}
+        {activeTab === 'formation' && <FormationTab profile={userProfile} onSwitchTab={setActiveTab} />}
+        {activeTab === 'rpa' && (
+          <RPADashboard 
+            profile={userProfile} 
+            onRefresh={triggerRefresh} 
+            onSwitchTab={setActiveTab} 
+            onStartGuide={() => {
+              localStorage.removeItem('mz_rpa_guide_completed');
+              setIsRPAGuideActive(true);
+            }}
+          />
+        )}
+        {activeTab === 'suggestions' && <SuggestionsTab profile={userProfile} />}
+        {activeTab === 'guides' && (
+          <GuidesTab 
+            onStartAffiliationGuide={() => {
+              localStorage.removeItem('mz_guide_completed');
+              setActiveTab('dashboard');
+              setIsGuideActive(true);
+            }}
+            onStartRPAGuide={() => {
+              localStorage.removeItem('mz_rpa_guide_completed');
+              setActiveTab('rpa');
+              setIsRPAGuideActive(true);
+            }}
+            onStartTeamGuide={() => {
+              localStorage.removeItem('mz_team_guide_completed');
+              setActiveTab('team');
+              setIsTeamGuideActive(true);
+            }}
+          />
+        )}
+        {activeTab === 'upgrade' && <UpgradeTab />}
+        {activeTab === 'luna_chat' && <LunaChatPage profile={userProfile} onUpgrade={() => setActiveTab('flash_offer')} />}
+        {activeTab === 'admin' && isAdmin && <AdminPanel adminProfile={userProfile} lastUpdateSignal={lastUpdateSignal} onRefresh={triggerRefresh} />}
+      <PWAInstallPrompt />
+    </DashboardLayout>
   );
 };
 
