@@ -45,6 +45,7 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
   isMenuOpen = false,
   setIsMenuOpen = (_open: boolean) => {}
 }) => {
+  console.log("DashboardLayout: Rendering with tab:", activeTab);
   const menuItems = [
     { id: 'dashboard' as TabId, label: 'Tableau de Bord', icon: Home },
     { id: 'revenus' as TabId, label: 'Trésorerie & Gains', icon: Coins },

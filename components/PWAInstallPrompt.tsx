@@ -8,7 +8,7 @@ export const PWAInstallPrompt: React.FC = () => {
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const [isVisible, setIsVisible] = useState(false);
   const [isIOS, setIsIOS] = useState(false);
-  const [platformIcon, setPlatformIcon] = useState<string>("https://picsum.photos/seed/mzplus/512/512");
+  const [platformIcon, setPlatformIcon] = useState<string>("https://chatgpt.com/backend-api/estuary/content?id=file_00000000bbf8722fbb4f02c3737a51c8&cp=pri&ma=90000&ts=20553&p=igh&cid=1&sig=e709109e0b34c94229d5b1f8ca2269efe44a484f8b0a52a6e34bb2b1736a39bc&v=0");
 
   useEffect(() => {
     // Fetch dynamic icon
@@ -98,6 +98,9 @@ export const PWAInstallPrompt: React.FC = () => {
                   alt="MZ+ Elite" 
                   className="w-full h-full object-cover"
                   referrerPolicy="no-referrer"
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).src = "https://picsum.photos/seed/mzplus/512/512";
+                  }}
                 />
               </div>
               
