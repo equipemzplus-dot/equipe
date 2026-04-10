@@ -29,9 +29,18 @@ self.addEventListener('activate', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
+  // Stratégie Network First : on tente le réseau, sinon le cache
+  // C'est plus sûr pour une application dynamique qui change souvent
   event.respondWith(
-    caches.match(event.request).then((response) => {
-      return response || fetch(event.request);
-    })
+    fetch(event.request)
+      .then((response) => {
+        // Si la réponse est valide, on peut éventuellement la mettre en cache ici
+        // Mais pour l'instant on se contente de la retourner
+        return response;
+      })
+      .catch(() => {
+        // En cas d'échec réseau (hors ligne), on cherche dans le cache
+        return caches.match(event.request);
+      })
   );
 });

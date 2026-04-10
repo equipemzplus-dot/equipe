@@ -1,6 +1,6 @@
 
-import React, { Component, useState, useEffect, useCallback } from 'react';
-import { Loader } from 'lucide-react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { Loader, RefreshCw } from 'lucide-react';
 import { supabase } from './services/supabase.ts';
 import { UserProfile, Wallet, TabId, Product } from './types.ts';
 import { LandingPage } from './components/LandingPage.tsx';
@@ -133,13 +133,10 @@ const App: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    let mounted = true;
-
     // Fetch dynamic platform identity (Icon)
     const fetchIcon = async () => {
       try {
         const { data } = await supabase.from('mz_home_config').select('platform_icon_url').eq('id', 'home-landing').maybeSingle();
-        if (!mounted) return;
         if (data?.platform_icon_url) {
           const appleIcon = document.querySelector('link[rel="apple-touch-icon"]');
           if (appleIcon) appleIcon.setAttribute('href', data.platform_icon_url);
@@ -150,8 +147,11 @@ const App: React.FC = () => {
         console.warn("Icon fetch error:", err);
       }
     };
-
     fetchIcon();
+  }, []);
+
+  useEffect(() => {
+    let mounted = true;
 
     const initializeAuth = async () => {
       try {
@@ -161,13 +161,13 @@ const App: React.FC = () => {
         setSession(s);
         if (s) {
           await fetchUserData(s.user.id, s.user.email, s.user.user_metadata?.full_name);
-        } else if (isProductChecked) {
+        } else {
           setLoading(false);
         }
         setAuthInitialized(true);
       } catch (error: any) {
         console.error("Initial session fetch error:", error);
-        if (isProductChecked) setLoading(false);
+        setLoading(false);
         setAuthInitialized(true);
       }
     };
@@ -177,18 +177,15 @@ const App: React.FC = () => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, s) => {
       if (!mounted) return;
       
-      // On ne déclenche le fetch que si la session a réellement changé ou si c'est un nouvel utilisateur
-      // Cela évite les boucles infinies ou les appels redondants sur TOKEN_REFRESHED
       setSession(s);
       
       if (s) {
         // On ne recharge les données que si l'ID utilisateur a changé ou si on n'a pas encore de profil
-        if (!userProfile || userProfile.id !== s.user.id) {
-          await fetchUserData(s.user.id, s.user.email, s.user.user_metadata?.full_name);
-        }
+        // On utilise l'ID de la session directement pour éviter de dépendre de userProfile dans l'effet
+        await fetchUserData(s.user.id, s.user.email, s.user.user_metadata?.full_name);
       } else {
         setUserProfile(null);
-        if (isProductChecked) setLoading(false);
+        setLoading(false);
       }
     });
 
@@ -196,7 +193,7 @@ const App: React.FC = () => {
       mounted = false;
       subscription.unsubscribe();
     };
-  }, [fetchUserData, isProductChecked, userProfile?.id]);
+  }, [fetchUserData]);
 
   useEffect(() => {
     const checkProduct = async (retryCount = 0) => {
@@ -316,17 +313,67 @@ const App: React.FC = () => {
     }, 800); // Délai suffisant pour l'enregistrement et l'effet visuel
   }, [customerProduct, referrerId]);
 
-  if (loading || !isProductChecked) return (
-    <div className="min-h-screen bg-[#050505] flex flex-col items-center justify-center text-yellow-500 font-black gap-4">
-      <Loader className="animate-spin" size={48} />
-      <span className="text-[10px] tracking-[0.3em] uppercase animate-pulse">MZ+ SYSTEM : CHARGEMENT...</span>
-    </div>
-  );
-  
-  if (customerProduct) return (<ProductSalesPage product={customerProduct} onPurchase={handlePurchase} purchaseStep={purchaseStep} countdown={900} isLoggedIn={!!session} />);
-  if (!session) return <LandingPage />;
+  if (loading || !isProductChecked || !authInitialized) {
+    return (
+      <div className="min-h-screen bg-[#050505] flex flex-col items-center justify-center text-yellow-500 font-black gap-6">
+        <div className="relative">
+          <Loader className="animate-spin text-yellow-600" size={56} strokeWidth={3} />
+          <div className="absolute inset-0 bg-yellow-500 blur-2xl opacity-10 animate-pulse"></div>
+        </div>
+        <div className="flex flex-col items-center gap-2">
+          <span className="text-[11px] tracking-[0.4em] uppercase animate-pulse">Initialisation MZ+ Élite</span>
+          <span className="text-[8px] tracking-[0.2em] text-neutral-600 uppercase">Vérification des protocoles de sécurité...</span>
+        </div>
+        
+        <button 
+          onClick={() => window.location.reload()}
+          className="mt-12 px-6 py-2 border border-white/5 rounded-full text-[8px] text-neutral-700 uppercase tracking-widest hover:text-white hover:border-white/20 transition-all"
+        >
+          Le chargement est trop long ? Rafraîchir
+        </button>
+      </div>
+    );
+  }
 
   const isAdmin = userProfile?.is_admin === true || !!userProfile?.admin_role;
+
+  if (customerProduct) {
+    return (
+      <ProductSalesPage 
+        product={customerProduct} 
+        referrerId={referrerId} 
+        purchaseStep={purchaseStep}
+        onPurchase={handlePurchase}
+        onSuccess={() => setPurchaseStep('success')}
+        countdown={900}
+        isLoggedIn={!!session}
+      />
+    );
+  }
+
+  if (!session) {
+    return <LandingPage />;
+  }
+
+  if (!userProfile) {
+    return (
+      <div className="min-h-screen bg-[#050505] flex flex-col items-center justify-center p-8 text-center">
+        <div className="w-16 h-16 bg-yellow-600/10 rounded-2xl flex items-center justify-center text-yellow-600 mb-6 border border-yellow-600/20">
+          <RefreshCw className="animate-spin" size={32} />
+        </div>
+        <h2 className="text-xl font-black text-white uppercase tracking-tighter mb-2">Synchronisation du Profil</h2>
+        <p className="text-neutral-500 text-[10px] uppercase tracking-widest mb-8 max-w-xs leading-relaxed">
+          Nous récupérons vos accès ambassadeur. Cela peut prendre quelques secondes.
+        </p>
+        <button 
+          onClick={() => session && fetchUserData(session.user.id, session.user.email, session.user.user_metadata?.full_name)}
+          className="px-8 py-3 bg-white/5 text-white border border-white/10 font-black uppercase text-[10px] tracking-widest rounded-xl hover:bg-white/10 transition-all"
+        >
+          Réessayer la synchronisation
+        </button>
+      </div>
+    );
+  }
 
   return (
     <DashboardLayout 
@@ -337,85 +384,85 @@ const App: React.FC = () => {
       isMenuOpen={isMenuOpen}
       setIsMenuOpen={setIsMenuOpen}
     >
-      <PremiumAccessGate />
-      
-      <PushDisplay profile={userProfile} />
-      <PremiumPopup user={userProfile} />
-      <MZPlusPresentationOverlay profile={userProfile} onUpgrade={() => setActiveTab('flash_offer')} />
-      <AnnouncementOverlay profile={userProfile} onNavigate={(tab) => setActiveTab(tab as TabId)} />
-      <SlideNotificationAffiliation activeTab={activeTab} onUpgrade={() => setActiveTab('flash_offer')} />
+        <PremiumAccessGate />
+        
+        <PushDisplay profile={userProfile} />
+        <PremiumPopup user={userProfile} />
+        <MZPlusPresentationOverlay profile={userProfile} onUpgrade={() => setActiveTab('flash_offer')} />
+        <AnnouncementOverlay profile={userProfile} onNavigate={(tab) => setActiveTab(tab as TabId)} />
+        <SlideNotificationAffiliation activeTab={activeTab} onUpgrade={() => setActiveTab('flash_offer')} />
 
-      {activeTab === 'flash_offer' && <MZPlusFlashOfferOverlay profile={userProfile} onUpgrade={() => setActiveTab('upgrade')} onClose={() => setActiveTab('dashboard')} isFullPage={true} />}
-      {activeTab === 'dashboard' && (
-        <GlobalView 
-          profile={userProfile} 
-          onSwitchTab={setActiveTab} 
-          onStartGuide={() => {
-            if (!localStorage.getItem('mz_guide_completed')) {
-              setIsGuideActive(true);
-              localStorage.setItem('mz_guide_completed', 'true');
-            }
-          }}
+        {activeTab === 'flash_offer' && <MZPlusFlashOfferOverlay profile={userProfile} onUpgrade={() => setActiveTab('upgrade')} onClose={() => setActiveTab('dashboard')} isFullPage={true} />}
+        {activeTab === 'dashboard' && (
+          <GlobalView 
+            profile={userProfile} 
+            onSwitchTab={setActiveTab} 
+            onStartGuide={() => {
+              if (!localStorage.getItem('mz_guide_completed')) {
+                setIsGuideActive(true);
+                localStorage.setItem('mz_guide_completed', 'true');
+              }
+            }}
+            activeCategory={activeCategory}
+            setActiveCategory={setActiveCategory}
+          />
+        )}
+        <AffiliationGuide 
+          isActive={isGuideActive} 
+          onComplete={() => setIsGuideActive(false)} 
           activeCategory={activeCategory}
-          setActiveCategory={setActiveCategory}
+          activeTab={activeTab}
         />
-      )}
-      <AffiliationGuide 
-        isActive={isGuideActive} 
-        onComplete={() => setIsGuideActive(false)} 
-        activeCategory={activeCategory}
-        activeTab={activeTab}
-      />
-      <RPAGuide 
-        isActive={isRPAGuideActive} 
-        onComplete={() => setIsRPAGuideActive(false)} 
-      />
-      <TeamGuide 
-        isActive={isTeamGuideActive} 
-        onComplete={() => setIsTeamGuideActive(false)} 
-      />
-      {activeTab === 'recompense' && <RewardFeature profile={userProfile} onSwitchTab={setActiveTab} />}
-      {activeTab === 'private_chat' && <EspacePrive profile={userProfile} />}
-      {activeTab === 'private_messaging' && <PrivateMessagingMain profile={userProfile} />}
-      {activeTab === 'revenus' && <RevenueTab profile={userProfile} wallet={wallet} />}
-      {activeTab === 'affiliation' && <AffiliationSystem profile={userProfile} lastUpdateSignal={lastUpdateSignal} onSwitchTab={setActiveTab} />}
-      {activeTab === 'team' && <TeamTab profile={userProfile} teamCount={teamCount} onSwitchTab={setActiveTab} />}
-      {activeTab === 'coaching' && <CoachingTab profile={userProfile} onSwitchTab={setActiveTab} />}
-      {activeTab === 'formation' && <FormationTab profile={userProfile} onSwitchTab={setActiveTab} />}
-      {activeTab === 'rpa' && (
-        <RPADashboard 
-          profile={userProfile} 
-          onRefresh={triggerRefresh} 
-          onSwitchTab={setActiveTab} 
-          onStartGuide={() => {
-            localStorage.removeItem('mz_rpa_guide_completed');
-            setIsRPAGuideActive(true);
-          }}
+        <RPAGuide 
+          isActive={isRPAGuideActive} 
+          onComplete={() => setIsRPAGuideActive(false)} 
         />
-      )}
-      {activeTab === 'suggestions' && <SuggestionsTab profile={userProfile} />}
-      {activeTab === 'guides' && (
-        <GuidesTab 
-          onStartAffiliationGuide={() => {
-            localStorage.removeItem('mz_guide_completed');
-            setActiveTab('dashboard');
-            setIsGuideActive(true);
-          }}
-          onStartRPAGuide={() => {
-            localStorage.removeItem('mz_rpa_guide_completed');
-            setActiveTab('rpa');
-            setIsRPAGuideActive(true);
-          }}
-          onStartTeamGuide={() => {
-            localStorage.removeItem('mz_team_guide_completed');
-            setActiveTab('team');
-            setIsTeamGuideActive(true);
-          }}
+        <TeamGuide 
+          isActive={isTeamGuideActive} 
+          onComplete={() => setIsTeamGuideActive(false)} 
         />
-      )}
-      {activeTab === 'upgrade' && <UpgradeTab />}
-      {activeTab === 'luna_chat' && <LunaChatPage profile={userProfile} onUpgrade={() => setActiveTab('flash_offer')} />}
-      {activeTab === 'admin' && isAdmin && <AdminPanel adminProfile={userProfile} lastUpdateSignal={lastUpdateSignal} onRefresh={triggerRefresh} />}
+        {activeTab === 'recompense' && <RewardFeature profile={userProfile} onSwitchTab={setActiveTab} />}
+        {activeTab === 'private_chat' && <EspacePrive profile={userProfile} />}
+        {activeTab === 'private_messaging' && <PrivateMessagingMain profile={userProfile} />}
+        {activeTab === 'revenus' && <RevenueTab profile={userProfile} wallet={wallet} />}
+        {activeTab === 'affiliation' && <AffiliationSystem profile={userProfile} lastUpdateSignal={lastUpdateSignal} onSwitchTab={setActiveTab} />}
+        {activeTab === 'team' && <TeamTab profile={userProfile} teamCount={teamCount} onSwitchTab={setActiveTab} />}
+        {activeTab === 'coaching' && <CoachingTab profile={userProfile} onSwitchTab={setActiveTab} />}
+        {activeTab === 'formation' && <FormationTab profile={userProfile} onSwitchTab={setActiveTab} />}
+        {activeTab === 'rpa' && (
+          <RPADashboard 
+            profile={userProfile} 
+            onRefresh={triggerRefresh} 
+            onSwitchTab={setActiveTab} 
+            onStartGuide={() => {
+              localStorage.removeItem('mz_rpa_guide_completed');
+              setIsRPAGuideActive(true);
+            }}
+          />
+        )}
+        {activeTab === 'suggestions' && <SuggestionsTab profile={userProfile} />}
+        {activeTab === 'guides' && (
+          <GuidesTab 
+            onStartAffiliationGuide={() => {
+              localStorage.removeItem('mz_guide_completed');
+              setActiveTab('dashboard');
+              setIsGuideActive(true);
+            }}
+            onStartRPAGuide={() => {
+              localStorage.removeItem('mz_rpa_guide_completed');
+              setActiveTab('rpa');
+              setIsRPAGuideActive(true);
+            }}
+            onStartTeamGuide={() => {
+              localStorage.removeItem('mz_team_guide_completed');
+              setActiveTab('team');
+              setIsTeamGuideActive(true);
+            }}
+          />
+        )}
+        {activeTab === 'upgrade' && <UpgradeTab />}
+        {activeTab === 'luna_chat' && <LunaChatPage profile={userProfile} onUpgrade={() => setActiveTab('flash_offer')} />}
+        {activeTab === 'admin' && isAdmin && <AdminPanel adminProfile={userProfile} lastUpdateSignal={lastUpdateSignal} onRefresh={triggerRefresh} />}
       <PWAInstallPrompt />
     </DashboardLayout>
   );
