@@ -12,7 +12,6 @@
   "dependencies": {
     "@google/genai": "^1.35.0",
     "@supabase/supabase-js": "2.46.1",
-    "@tailwindcss/vite": "^4.2.2",
     "@types/sql.js": "^1.4.9",
     "clsx": "^2.1.1",
     "lucide-react": "^0.460.0",
@@ -20,8 +19,7 @@
     "react": "19.0.0",
     "react-dom": "19.0.0",
     "sql.js": "^1.14.1",
-    "tailwind-merge": "^3.5.0",
-    "tailwindcss": "^4.2.2"
+    "tailwind-merge": "^3.5.0"
   },
   "devDependencies": {
     "@types/node": "^22.14.0",
