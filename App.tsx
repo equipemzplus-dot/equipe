@@ -59,6 +59,20 @@ const App: React.FC = () => {
   const [isTeamGuideActive, setIsTeamGuideActive] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [authInitialized, setAuthInitialized] = useState(false);
+  const [showDiagnostic, setShowDiagnostic] = useState(false);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (loading || !isProductChecked || !authInitialized) {
+        setShowDiagnostic(true);
+      }
+    }, 8000);
+    return () => clearTimeout(timer);
+  }, [loading, isProductChecked, authInitialized]);
+
+  useEffect(() => {
+    console.log("App: Initialization states - loading:", loading, "isProductChecked:", isProductChecked, "authInitialized:", authInitialized);
+  }, [loading, isProductChecked, authInitialized]);
 
   useEffect(() => {
     if (session && userProfile && !localStorage.getItem('mz_guide_completed')) {
@@ -154,14 +168,18 @@ const App: React.FC = () => {
     let mounted = true;
 
     const initializeAuth = async () => {
+      console.log("App: Initializing Auth...");
       try {
         const { data: { session: s } } = await supabase.auth.getSession();
+        console.log("App: Session fetched:", !!s);
         if (!mounted) return;
         
         setSession(s);
         if (s) {
+          console.log("App: Fetching user data for session...");
           await fetchUserData(s.user.id, s.user.email, s.user.user_metadata?.full_name);
         } else {
+          console.log("App: No session, stopping loading.");
           setLoading(false);
         }
         setAuthInitialized(true);
@@ -197,18 +215,24 @@ const App: React.FC = () => {
 
   useEffect(() => {
     const checkProduct = async (retryCount = 0) => {
+      console.log("App: Checking product (retry:", retryCount, ")...");
       try {
         const params = new URLSearchParams(window.location.search);
         const prodId = params.get('prod');
         const refCode = params.get('ref');
 
         if (prodId) {
+          console.log("App: Product ID found:", prodId);
           const { data: product, error } = await supabase.from('products').select('*').eq('id', prodId).maybeSingle();
           if (error) throw error;
-          if (product) setCustomerProduct(product);
+          if (product) {
+            console.log("App: Product loaded:", product.name);
+            setCustomerProduct(product);
+          }
         }
 
         if (refCode) {
+          console.log("App: Referrer code found:", refCode);
           const { data: referrer } = await supabase.from('users').select('id').eq('referral_code', refCode).maybeSingle();
           if (referrer && prodId) {
             setReferrerId(referrer.id);
@@ -315,7 +339,7 @@ const App: React.FC = () => {
 
   if (loading || !isProductChecked || !authInitialized) {
     return (
-      <div className="min-h-screen bg-[#050505] flex flex-col items-center justify-center text-yellow-500 font-black gap-6">
+      <div className="min-h-screen bg-[#050505] flex flex-col items-center justify-center text-yellow-500 font-black gap-6 p-6 text-center">
         <div className="relative">
           <Loader className="animate-spin text-yellow-600" size={56} strokeWidth={3} />
           <div className="absolute inset-0 bg-yellow-500 blur-2xl opacity-10 animate-pulse"></div>
@@ -325,12 +349,51 @@ const App: React.FC = () => {
           <span className="text-[8px] tracking-[0.2em] text-neutral-600 uppercase">Vérification des protocoles de sécurité...</span>
         </div>
         
-        <button 
-          onClick={() => window.location.reload()}
-          className="mt-12 px-6 py-2 border border-white/5 rounded-full text-[8px] text-neutral-700 uppercase tracking-widest hover:text-white hover:border-white/20 transition-all"
-        >
-          Le chargement est trop long ? Rafraîchir
-        </button>
+        {showDiagnostic && (
+          <div className="mt-8 space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-700">
+            <p className="text-[10px] text-neutral-500 uppercase tracking-widest leading-relaxed max-w-xs">
+              Le démarrage prend plus de temps que prévu. <br/>
+              Status: {loading ? "Chargement..." : "Prêt"} | {isProductChecked ? "Produit OK" : "Vérif Produit..."} | {authInitialized ? "Auth OK" : "Auth..."}
+            </p>
+            <div className="flex flex-col gap-3">
+              <button 
+                onClick={() => window.location.reload()}
+                className="px-6 py-3 bg-white/5 border border-white/10 rounded-xl text-[10px] text-white uppercase tracking-widest hover:bg-white/10 transition-all flex items-center justify-center gap-2"
+              >
+                <RefreshCw size={14} /> Rafraîchir la page
+              </button>
+              <button 
+                onClick={() => {
+                  localStorage.clear();
+                  sessionStorage.clear();
+                  window.location.reload();
+                }}
+                className="px-6 py-3 bg-red-600/10 border border-red-600/20 rounded-xl text-[10px] text-red-500 uppercase tracking-widest hover:bg-red-600/20 transition-all"
+              >
+                Réinitialiser le cache
+              </button>
+              <button 
+                onClick={() => {
+                  setLoading(false);
+                  setIsProductChecked(true);
+                  setAuthInitialized(true);
+                }}
+                className="text-[9px] text-neutral-600 underline underline-offset-4 hover:text-neutral-400"
+              >
+                Forcer le démarrage (Expert)
+              </button>
+            </div>
+          </div>
+        )}
+
+        {!showDiagnostic && (
+          <button 
+            onClick={() => window.location.reload()}
+            className="mt-12 px-6 py-2 border border-white/5 rounded-full text-[8px] text-neutral-700 uppercase tracking-widest hover:text-white hover:border-white/20 transition-all"
+          >
+            Le chargement est trop long ? Rafraîchir
+          </button>
+        )}
       </div>
     );
   }

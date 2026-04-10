@@ -8,7 +8,7 @@ export const PWAInstallPrompt: React.FC = () => {
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const [isVisible, setIsVisible] = useState(false);
   const [isIOS, setIsIOS] = useState(false);
-  const [platformIcon, setPlatformIcon] = useState<string>("https://storage.googleapis.com/static.antigravity.dev/applets/7uh5mtashjcrpvg5aiawes/c9222452-32b5-4720-835c-204126130f14.png");
+  const [platformIcon, setPlatformIcon] = useState<string>("https://picsum.photos/seed/mzplus/512/512");
 
   useEffect(() => {
     // Fetch dynamic icon
