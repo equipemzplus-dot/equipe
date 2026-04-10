@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { Component, useState, useEffect, useCallback } from 'react';
 import { Loader } from 'lucide-react';
 import { supabase } from './services/supabase.ts';
 import { UserProfile, Wallet, TabId, Product } from './types.ts';
@@ -58,6 +58,7 @@ const App: React.FC = () => {
   const [isRPAGuideActive, setIsRPAGuideActive] = useState(false);
   const [isTeamGuideActive, setIsTeamGuideActive] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [authInitialized, setAuthInitialized] = useState(false);
 
   useEffect(() => {
     if (session && userProfile && !localStorage.getItem('mz_guide_completed')) {
@@ -70,12 +71,16 @@ const App: React.FC = () => {
   }, [session, userProfile]);
 
   const fetchUserData = useCallback(async (userId: string, email?: string, fullName?: string, retryCount = 0) => {
+    if (!userId) return;
+    
     try {
       const userEmail = email?.toLowerCase().trim() || "";
       const isHardcodedAdmin = ADMIN_EMAILS.includes(userEmail);
       
-      let { data: profile } = await supabase.from('users').select('*').eq('id', userId).maybeSingle();
+      let { data: profile, error: profileError } = await supabase.from('users').select('*').eq('id', userId).maybeSingle();
       
+      if (profileError) throw profileError;
+
       if (!profile) {
         const newRefCode = Math.random().toString(36).substring(2, 8).toUpperCase();
         const newProfileData = { 
@@ -87,7 +92,8 @@ const App: React.FC = () => {
           is_admin: isHardcodedAdmin, 
           user_level: 'standard'
         };
-        const { data: upsertedProfile } = await supabase.from('users').upsert(newProfileData, { onConflict: 'id' }).select('*').single();
+        const { data: upsertedProfile, error: upsertError } = await supabase.from('users').upsert(newProfileData, { onConflict: 'id' }).select('*').single();
+        if (upsertError) throw upsertError;
         profile = upsertedProfile || (newProfileData as any);
       }
 
@@ -127,44 +133,70 @@ const App: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    // Fetch dynamic platform identity (Icon)
-    supabase.from('mz_home_config').select('platform_icon_url').eq('id', 'home-landing').maybeSingle().then(({ data }) => {
-      if (data?.platform_icon_url) {
-        // Update apple-touch-icon
-        const appleIcon = document.querySelector('link[rel="apple-touch-icon"]');
-        if (appleIcon) appleIcon.setAttribute('href', data.platform_icon_url);
-        
-        // Update favicon
-        const favicon = document.querySelector('link[rel="icon"]');
-        if (favicon) favicon.setAttribute('href', data.platform_icon_url);
-      }
-    });
+    let mounted = true;
 
-    const getInitialSession = async (retryCount = 0) => {
+    // Fetch dynamic platform identity (Icon)
+    const fetchIcon = async () => {
       try {
-        const { data: { session: s } } = await supabase.auth.getSession();
-        setSession(s); 
-        if (s) fetchUserData(s.user.id, s.user.email, s.user.user_metadata?.full_name); 
-        else if (isProductChecked) setLoading(false);
-      } catch (error: any) {
-        console.error("Initial session fetch error:", error);
-        if (retryCount < 3 && (error.message?.includes('fetch') || error.name === 'TypeError')) {
-          setTimeout(() => getInitialSession(retryCount + 1), 1000 * (retryCount + 1));
-        } else if (isProductChecked) {
-          setLoading(false);
+        const { data } = await supabase.from('mz_home_config').select('platform_icon_url').eq('id', 'home-landing').maybeSingle();
+        if (!mounted) return;
+        if (data?.platform_icon_url) {
+          const appleIcon = document.querySelector('link[rel="apple-touch-icon"]');
+          if (appleIcon) appleIcon.setAttribute('href', data.platform_icon_url);
+          const favicon = document.querySelector('link[rel="icon"]');
+          if (favicon) favicon.setAttribute('href', data.platform_icon_url);
         }
+      } catch (err) {
+        console.warn("Icon fetch error:", err);
       }
     };
 
-    getInitialSession();
+    fetchIcon();
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, s) => { 
-      setSession(s); 
-      if (s) fetchUserData(s.user.id, s.user.email, s.user.user_metadata?.full_name); 
-      else { setUserProfile(null); if (isProductChecked) setLoading(false); } 
+    const initializeAuth = async () => {
+      try {
+        const { data: { session: s } } = await supabase.auth.getSession();
+        if (!mounted) return;
+        
+        setSession(s);
+        if (s) {
+          await fetchUserData(s.user.id, s.user.email, s.user.user_metadata?.full_name);
+        } else if (isProductChecked) {
+          setLoading(false);
+        }
+        setAuthInitialized(true);
+      } catch (error: any) {
+        console.error("Initial session fetch error:", error);
+        if (isProductChecked) setLoading(false);
+        setAuthInitialized(true);
+      }
+    };
+
+    initializeAuth();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, s) => {
+      if (!mounted) return;
+      
+      // On ne déclenche le fetch que si la session a réellement changé ou si c'est un nouvel utilisateur
+      // Cela évite les boucles infinies ou les appels redondants sur TOKEN_REFRESHED
+      setSession(s);
+      
+      if (s) {
+        // On ne recharge les données que si l'ID utilisateur a changé ou si on n'a pas encore de profil
+        if (!userProfile || userProfile.id !== s.user.id) {
+          await fetchUserData(s.user.id, s.user.email, s.user.user_metadata?.full_name);
+        }
+      } else {
+        setUserProfile(null);
+        if (isProductChecked) setLoading(false);
+      }
     });
-    return () => subscription.unsubscribe();
-  }, [fetchUserData, isProductChecked]);
+
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
+  }, [fetchUserData, isProductChecked, userProfile?.id]);
 
   useEffect(() => {
     const checkProduct = async (retryCount = 0) => {
